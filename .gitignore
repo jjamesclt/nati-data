@@ -1,3 +1,57 @@
+# Virtual environments
+.venv/
+venv/
+.git
+.replit
+
+# Byte-compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and system files
+*.log
+*.out
+*.err
+nohup.out
+
+# IDE and editor-specific files
+.idea/             # PyCharm
+.vscode/           # VSCode
+*.swp              # Vim swap files
+*.iml
+*.xml
+.DS_Store          # macOS system files
+Thumbs.db          # Windows system files
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+*.tar.gz
+*.whl
+
+# Configuration files
+*.ini
+
+# Database(s)
+*.db
+
+# Coverage and testing
+.coverage
+htmlcov/
+*.cover
+.cache/
+pytest_cache/
+
+# Jupyter Notebook checkpoints (if used)
+.ipynb_checkpoints/
+
+# Temporary files
+tmp/
+*.tmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
