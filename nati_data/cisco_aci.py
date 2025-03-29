@@ -2,7 +2,6 @@ import requests
 import pymysql
 import configparser
 import json
-from .utils import today
 
 # Load configuration
 config = configparser.ConfigParser()
@@ -45,8 +44,7 @@ for node in nodes:
         'id': attr['id'],
         'name': attr['name'],
         'role': attr['role'],
-        'serial': attr.get('serial', ''),
-        'last_updated': today()
+        'serial': attr.get('serial', '')
     }
     node_list.append(node_info)
 
@@ -55,14 +53,14 @@ conn = pymysql.connect(**db_config)
 cursor = conn.cursor()
 
 insert_query = """
-INSERT INTO aci_node (id, name, role, serial, last_updated)
-VALUES (%s, %s, %s, %s, %s)
+INSERT INTO aci_node (id, name, role, serial)
+VALUES (%s, %s, %s, %s)
 ON DUPLICATE KEY UPDATE
-name=VALUES(name), role=VALUES(role), serial=VALUES(serial), last_updated=VALUES(last_updated)
+name=VALUES(name), role=VALUES(role), serial=VALUES(serial)
 """
 
 for node in node_list:
-    cursor.execute(insert_query, (node['id'], node['name'], node['role'], node['serial'], node['last_updated']))
+    cursor.execute(insert_query, (node['id'], node['name'], node['role'], node['serial']))
 
 conn.commit()
 cursor.close()

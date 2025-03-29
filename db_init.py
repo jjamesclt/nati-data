@@ -1,65 +1,157 @@
-import os
-import sys
+import pymysql
 import configparser
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import OperationalError
 
-# Read database configuration
+# Load configuration
 config = configparser.ConfigParser()
-config.read("nati.ini")
+config.read('nati.ini')
 
-db_type = config["database"]["type"].lower()
+# Database credentials
+db_config = {
+    'host': config['database']['host'],
+    'port': int(config['database']['port']),
+    'user': config['database']['username'],
+    'password': config['database']['password'],
+    'database': config['database']['database']
+}
 
-if db_type == "sqlite":
-    sqlite_file = config["database"]["filename"]
+# SQL commands to create tables
+create_site_table = """
+CREATE TABLE IF NOT EXISTS site (
+    site_uuid CHAR(36) NOT NULL,
+    site_id VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    region VARCHAR(100),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (site_uuid),
+    UNIQUE INDEX (site_id),
+    INDEX (name),
+    INDEX (country),
+    INDEX (region)
+);
+"""
 
-    # Check if the SQLite file exists
-    if os.path.exists(sqlite_file):
-        print(f"Error: SQLite database file '{sqlite_file}' already exists.")
-        print("Please rename or delete the file before running this script.")
-        sys.exit(1)
+create_aci_fabric_table = """
+CREATE TABLE IF NOT EXISTS aci_fabric (
+    fabric_uuid CHAR(36) NOT NULL,
+    site_uuid CHAR(36) NOT NULL,
+    fabric_name VARCHAR(50) NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    host VARCHAR(100) NOT NULL,
+    username VARCHAR(100) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (fabric_uuid),
+    UNIQUE KEY unique_fabric (site_uuid, fabric_name),
+    FOREIGN KEY (site_uuid) REFERENCES site(site_uuid),
+    INDEX (host),
+    INDEX (username)
+);
+"""
 
-    DATABASE_URL = f"sqlite:///{sqlite_file}"
+# Additional ACI tables referencing fabric_uuid
+aci_tables = ["""
+CREATE TABLE IF NOT EXISTS aci_ap (
+    ap_id VARCHAR(100) NOT NULL,
+    fabric_uuid CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (ap_id, fabric_uuid),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid),
+    INDEX (name)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS aci_bd (
+    bd_id VARCHAR(100) NOT NULL,
+    fabric_uuid CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    subnet VARCHAR(50),
+    description VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (bd_id, fabric_uuid),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid),
+    INDEX (name),
+    INDEX (subnet)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS aci_epg (
+    epg_id VARCHAR(100) NOT NULL,
+    fabric_uuid CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (epg_id, fabric_uuid),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid),
+    INDEX (name)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS aci_vrf (
+    vrf_id VARCHAR(100) NOT NULL,
+    fabric_uuid CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (vrf_id, fabric_uuid),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid),
+    INDEX (name)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS aci_tenant (
+    tenant_id VARCHAR(100) NOT NULL,
+    fabric_uuid CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant_id, fabric_uuid),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid),
+    INDEX (name)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS aci_node (
+    node_id VARCHAR(100) NOT NULL,
+    fabric_uuid CHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    serial VARCHAR(100),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (node_id, fabric_uuid),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid),
+    INDEX (name),
+    INDEX (role)
+);
+"""]
 
-elif db_type == "mariadb":
-    host = config["database"]["host"]
-    port = config["database"]["port"]
-    database = config["database"]["database"]
-    username = config["database"]["username"]
-    password = config["database"]["password"]
+# Attempt database connection and table creation
+try:
+    conn = pymysql.connect(**db_config)
+    cursor = conn.cursor()
 
-    DATABASE_URL = f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}"
+    cursor.execute(create_site_table)
+    cursor.execute(create_aci_fabric_table)
 
-else:
-    print(
-        "Error: Unsupported database type. Choose 'sqlite' or 'mariadb' in config.ini."
-    )
-    sys.exit(1)
+    for table in aci_tables:
+        cursor.execute(table)
 
-# Initialize SQLAlchemy
-engine = create_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+    conn.commit()
+    print("All tables including site, aci_fabric, and additional ACI tables created successfully or already exist.")
 
-# Ensure SQLite enforces foreign keys
-if db_type == "sqlite":
+except pymysql.err.OperationalError as e:
+    if '1049' in str(e):
+        print("Error: The specified database does not exist. Please create it first.")
+    elif '1045' in str(e):
+        print("Error: Access denied. Please check your database username and password.")
+    else:
+        print(f"Operational error: {e}")
 
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON;")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+
+finally:
+    if 'conn' in locals() and conn.open:
         cursor.close()
-
-
-# Test database connection for MariaDB
-if db_type == "mariadb":
-    try:
-        with engine.connect() as conn:
-            print(f"Successfully connected to MariaDB database: {database}")
-    except OperationalError as e:
-        print(f"Error: Unable to connect to MariaDB database '{database}'.")
-        print(
-            "Make sure the database exists and your credentials are correct.")
-        print(f"Detailed error: {e}")
-        sys.exit(1)
+        conn.close()
