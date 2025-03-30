@@ -15,7 +15,18 @@ db_config = {
 }
 
 # SQL commands to create tables
-create_site_table = """
+db_tables = ['''
+CREATE TABLE IF NOT EXISTS device (
+    id CHAR(36) PRIMARY KEY,
+    hostname TEXT NOT NULL,
+    model TEXT,
+    serial_number TEXT,
+    ip_address TEXT,
+    vendor TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+''',
+"""
 CREATE TABLE IF NOT EXISTS site (
     site_uuid CHAR(36) NOT NULL,
     site_id VARCHAR(50) NOT NULL,
@@ -29,9 +40,8 @@ CREATE TABLE IF NOT EXISTS site (
     INDEX (country),
     INDEX (region)
 );
+""",
 """
-
-create_aci_fabric_table = """
 CREATE TABLE IF NOT EXISTS aci_fabric (
     fabric_uuid CHAR(36) NOT NULL,
     site_uuid CHAR(36) NOT NULL,
@@ -46,10 +56,8 @@ CREATE TABLE IF NOT EXISTS aci_fabric (
     INDEX (host),
     INDEX (username)
 );
+""",
 """
-
-# Additional ACI tables referencing fabric_uuid
-aci_tables = ["""
 CREATE TABLE IF NOT EXISTS aci_ap (
     ap_id VARCHAR(100) NOT NULL,
     fabric_uuid CHAR(36) NOT NULL,
@@ -131,14 +139,11 @@ try:
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
 
-    cursor.execute(create_site_table)
-    cursor.execute(create_aci_fabric_table)
-
-    for table in aci_tables:
+    for table in db_tables:
         cursor.execute(table)
 
     conn.commit()
-    print("All tables including site, aci_fabric, and additional ACI tables created successfully or already exist.")
+    print("All tables created successfully or already exist.")
 
 except pymysql.err.OperationalError as e:
     if '1049' in str(e):
