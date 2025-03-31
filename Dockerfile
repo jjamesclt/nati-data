@@ -1,17 +1,20 @@
-# Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements first (for caching)
-COPY requirements.txt .
+# Install dependencies (including vi)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    vim-tiny \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Copy Python dependencies first for caching
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy rest of the application
+# Copy the rest of the app
 COPY . .
 
-# Default command to run your script
+# Default command
 CMD ["python", "main.py"]
