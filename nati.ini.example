@@ -10,3 +10,13 @@ port = 3306
 database = nati
 username = your_user
 password = your_pass
+
+[ciscoaci]
+url = https://sandboxapicdc.cisco.com
+host = sandboxapicdc.cisco.com
+username = admin
+password = password
+
+[ciscocli]
+username = admin
+password = password
