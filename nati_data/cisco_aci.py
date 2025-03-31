@@ -286,43 +286,8 @@ def collect_aci_epgs():
             }
             insert_aci_epg(epg_info, fabric['fabric_uuid'])
 
-
-def new_fabric():
-    site_uuid = input("Enter Site UUID: ").strip()
-    fabric_name = input("Enter Fabric Name: ").strip()
-    url = input("Enter URL: ").strip()
-    host = input("Enter Host: ").strip()
-    username = input("Enter Username: ").strip()
-
-    # Generate a unique fabric UUID
-    fabric_uuid = str(uuid.uuid4())
-
-    # Connect to the database
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor()
-
-    # Insert data into the aci_fabric table
-    insert_query = """
-    INSERT INTO aci_fabric (fabric_uuid, site_uuid, fabric_name, url, host, username)
-    VALUES (%s, %s, %s, %s, %s, %s)
-    ON DUPLICATE KEY UPDATE
-    fabric_name = VALUES(fabric_name),
-    url = VALUES(url),
-    host = VALUES(host),
-    username = VALUES(username)
-    """
-
-    cursor.execute(insert_query, (fabric_uuid, site_uuid, fabric_name, url, host, username))
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
-    print(f"Fabric created successfully with UUID: {fabric_uuid}")
     
-
 def main():
-    #new_fabric()
     collect_aci_tenants()
     collect_aci_nodes()
     collect_aci_vrfs()
