@@ -18,5 +18,6 @@ username = admin
 password = password
 
 [ciscocli]
+host = sbx-nxos-mgmt.cisco.com
 username = admin
 password = password
