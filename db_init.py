@@ -1,13 +1,14 @@
 
 import pymysql
 import configparser
+import getpass
 
 # Load configuration
 config = configparser.ConfigParser()
 config.read('nati.ini')
 
 # Database credentials
-db_config = {
+default_config = {
     'host': config['database']['host'],
     'port': int(config['database']['port']),
     'user': config['database']['username'],
@@ -15,9 +16,25 @@ db_config = {
     'database': config['database']['database']
 }
 
+
+# Prompt user for elevated credentials
+print("Press Enter to use default credentials from nati.ini.")
+custom_user = input("Enter high-privilege DB username (or press Enter to use default): ").strip()
+
+if custom_user:
+    custom_password = getpass.getpass("Enter password for the high-privilege user: ")
+    db_config = {
+        'host': default_config['host'],
+        'port': default_config['port'],
+        'user': custom_user,
+        'password': custom_password,
+        'database': default_config['database']
+    }
+else:
+    db_config = default_config
+
 # SQL table creation commands
 db_tables = [
-
 """
 CREATE TABLE IF NOT EXISTS site (
     site_uuid CHAR(36) PRIMARY KEY,
@@ -28,8 +45,11 @@ CREATE TABLE IF NOT EXISTS site (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX (name)
 );
-""",
+"""
+]
 
+# SQL table creation commands
+aci_tables = [
 """
 CREATE TABLE IF NOT EXISTS aci_fabric (
     fabric_uuid CHAR(36) PRIMARY KEY,
@@ -141,6 +161,8 @@ try:
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
     for table in db_tables:
+        cursor.execute(table)
+    for table in aci_tables:
         cursor.execute(table)
     conn.commit()
     print("All tables created successfully or already exist.")
