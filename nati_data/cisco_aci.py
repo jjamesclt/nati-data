@@ -93,20 +93,6 @@ def collect_aci_nodes():
     print("ACI Nodes updated successfully.")
 
 
-def insert_aci_fabric(name, url, username, password):
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor()
-    insert_query = """
-    INSERT INTO aci_fabric (name, url, username, password)
-    VALUES (%s, %s, %s, %s)
-    """
-    cursor.execute(insert_query, (name, url, username, password))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print(f"ACI Fabric '{name}' added successfully.")
-
-
 def collect_aci_tenants():
     aci_host = aci_config['host']
     aci_user = aci_config['user']
@@ -124,7 +110,8 @@ def collect_aci_tenants():
         for tenant in tenants:
             attr = tenant['fvTenant']['attributes']
             tenant_info = {
-                'id': attr['dn'],
+                'id': attr['dn'].split('/')[1],
+                'dn': attr['dn'],
                 'name': attr['name'],
                 'descr': attr.get('descr', '')
             }
@@ -137,12 +124,12 @@ def insert_aci_tenant(tenant, fabric_uuid):
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
     insert_query = """
-    INSERT INTO aci_tenant (fabric_uuid, tenant_name, description)
-    VALUES (%s, %s, %s)
+    INSERT INTO aci_tenant (fabric_uuid, tenant_id, tenant_dn, tenant_name, description)
+    VALUES (%s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
-    name=VALUES(name), description=VALUES(description)
+    tenant_name=VALUES(tenant_name), description=VALUES(description)
     """
-    cursor.execute(insert_query, (fabric_uuid, tenant['name'], tenant['descr']))
+    cursor.execute(insert_query, (fabric_uuid, tenant['id'], tenant['dn'], tenant['name'], tenant['descr']))
     conn.commit()
     cursor.close()
     conn.close()
@@ -152,10 +139,10 @@ def insert_aci_vrf(vrf, fabric_uuid):
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
     insert_query = """
-    INSERT INTO aci_vrf (fabric_uuid, vrf_id, name, tenant_name, description)
+    INSERT INTO aci_vrf (fabric_uuid, vrf_id, vrf_name, tenant_id, description)
     VALUES (%s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
-    name=VALUES(name), description=VALUES(description)
+    vrf_name=VALUES(vrf_name), description=VALUES(description)
     """
     cursor.execute(insert_query, (fabric_uuid, vrf['id'], vrf['name'], vrf['tenant'], vrf['descr']))
     conn.commit()
@@ -176,21 +163,24 @@ def collect_aci_vrfs():
         for vrf in vrfs:
             attr = vrf['fvCtx']['attributes']
             vrf_info = {
-                'id': attr['dn'],
+                'id': attr['dn'].split('/')[2],  # extract VRF ID from DN
                 'name': attr['name'],
                 'tenant': attr['dn'].split('/')[1],  # extract tenant name from DN
                 'descr': attr.get('descr', '')
             }
             insert_aci_vrf(vrf_info, fabric['fabric_uuid'])
 
+    print("ACI VRFs updated successfully.")
+
+
 def insert_aci_ap(ap, fabric_uuid):
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
     insert_query = """
-    INSERT INTO aci_ap (fabric_uuid, ap_id, name, tenant_name, description)
+    INSERT INTO aci_ap (fabric_uuid, ap_id, ap_name, tenant_id, description)
     VALUES (%s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
-    name=VALUES(name), description=VALUES(description)
+    ap_name=VALUES(ap_name), description=VALUES(description)
     """
     cursor.execute(insert_query, (fabric_uuid, ap['id'], ap['name'], ap['tenant'], ap['descr']))
     conn.commit()
@@ -210,27 +200,30 @@ def collect_aci_aps():
         for ap in aps:
             attr = ap['fvAp']['attributes']
             ap_info = {
-                'id': attr['dn'],
+                'id': attr['dn'].split('/')[2],
                 'name': attr['name'],
                 'tenant': attr['dn'].split('/')[1],
                 'descr': attr.get('descr', '')
             }
             insert_aci_ap(ap_info, fabric['fabric_uuid'])
 
+    print("ACI APs updated successfully.")
+
 
 def insert_aci_bd(bd, fabric_uuid):
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
     insert_query = """
-    INSERT INTO aci_bd (fabric_uuid, bd_id, name, tenant_name, description)
+    INSERT INTO aci_bd (fabric_uuid, bd_id, bd_name, tenant_id, description)
     VALUES (%s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
-    name=VALUES(name), description=VALUES(description)
+    bd_name=VALUES(bd_name), description=VALUES(description)
     """
     cursor.execute(insert_query, (fabric_uuid, bd['id'], bd['name'], bd['tenant'], bd['descr']))
     conn.commit()
     cursor.close()
     conn.close()
+
 
 def collect_aci_bds():
     token = get_aci_token()
@@ -244,26 +237,30 @@ def collect_aci_bds():
         for bd in bds:
             attr = bd['fvBD']['attributes']
             bd_info = {
-                'id': attr['dn'],
+                'id': attr['dn'].split('/')[2],
                 'name': attr['name'],
                 'tenant': attr['dn'].split('/')[1],
                 'descr': attr.get('descr', '')
             }
             insert_aci_bd(bd_info, fabric['fabric_uuid'])
 
+    print("ACI BDs updated successfully.")
+
+
 def insert_aci_epg(epg, fabric_uuid):
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
     insert_query = """
-    INSERT INTO aci_epg (fabric_uuid, epg_id, name, tenant_name, ap_name, description)
+    INSERT INTO aci_epg (fabric_uuid, epg_id, epg_name, tenant_id, ap_id, description)
     VALUES (%s, %s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
-    name=VALUES(name), description=VALUES(description)
+    epg_name=VALUES(epg_name), description=VALUES(description)
     """
     cursor.execute(insert_query, (fabric_uuid, epg['id'], epg['name'], epg['tenant'], epg['ap'], epg['descr']))
     conn.commit()
     cursor.close()
     conn.close()
+
 
 def collect_aci_epgs():
     token = get_aci_token()
@@ -278,13 +275,15 @@ def collect_aci_epgs():
             attr = epg['fvAEPg']['attributes']
             parts = attr['dn'].split('/')
             epg_info = {
-                'id': attr['dn'],
+                'id': attr['dn'].split('/')[3],
                 'name': attr['name'],
                 'tenant': parts[1],
                 'ap': parts[2],
                 'descr': attr.get('descr', '')
             }
             insert_aci_epg(epg_info, fabric['fabric_uuid'])
+
+    print("ACI EPGs updated successfully.")
 
     
 def main():
@@ -298,4 +297,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

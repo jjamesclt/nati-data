@@ -23,12 +23,10 @@ CREATE TABLE IF NOT EXISTS site (
     site_uuid CHAR(36) PRIMARY KEY,
     site_id VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
-    country VARCHAR(100) NOT NULL,
+    country VARCHAR(2) NOT NULL,
     region VARCHAR(100),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX (name),
-    INDEX (country),
-    INDEX (region)
+    INDEX (name)
 );
 """,
 
@@ -42,33 +40,33 @@ CREATE TABLE IF NOT EXISTS aci_fabric (
     username VARCHAR(100) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE (site_uuid, fabric_name),
-    FOREIGN KEY (site_uuid) REFERENCES site(site_uuid) ON DELETE CASCADE,
-    INDEX (host),
-    INDEX (username)
+    FOREIGN KEY (site_uuid) REFERENCES site(site_uuid) ON DELETE CASCADE
 );
 """,
 
 """
 CREATE TABLE IF NOT EXISTS aci_tenant (
     fabric_uuid CHAR(36) NOT NULL,
+    tenant_dn VARCHAR(100) NOT NULL,
+    tenant_id VARCHAR(100) NOT NULL,
     tenant_name VARCHAR(100) NOT NULL,
     description VARCHAR(255),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (fabric_uuid, tenant_name),
-    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid) ON DELETE CASCADE,
-    INDEX (tenant_name)
+    PRIMARY KEY (fabric_uuid, tenant_id),
+    FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid) ON DELETE CASCADE
 );
 """,
 
 """
 CREATE TABLE IF NOT EXISTS aci_vrf (
     fabric_uuid CHAR(36) NOT NULL,
-    tenant_name VARCHAR(100) NOT NULL,
+    tenant_id VARCHAR(100) NOT NULL,
+    vrf_id VARCHAR(100) NOT NULL,
     vrf_name VARCHAR(100) NOT NULL,
     description VARCHAR(255),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (fabric_uuid, tenant_name, vrf_name),
-    FOREIGN KEY (fabric_uuid, tenant_name) REFERENCES aci_tenant(fabric_uuid, tenant_name) ON DELETE CASCADE,
+    PRIMARY KEY (fabric_uuid, tenant_id, vrf_id),
+    FOREIGN KEY (fabric_uuid, tenant_id) REFERENCES aci_tenant(fabric_uuid, tenant_id) ON DELETE CASCADE,
     INDEX (vrf_name)
 );
 """,
@@ -76,16 +74,17 @@ CREATE TABLE IF NOT EXISTS aci_vrf (
 """
 CREATE TABLE IF NOT EXISTS aci_bd (
     fabric_uuid CHAR(36) NOT NULL,
-    tenant_name VARCHAR(100) NOT NULL,
+    tenant_id VARCHAR(100) NOT NULL,
+    bd_id VARCHAR(100) NOT NULL,
     bd_name VARCHAR(100) NOT NULL,
-    vrf_name VARCHAR(100),
+    vrf_id VARCHAR(100),
     subnet VARCHAR(50),
     description VARCHAR(255),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (fabric_uuid, tenant_name, bd_name),
-    FOREIGN KEY (fabric_uuid, tenant_name) REFERENCES aci_tenant(fabric_uuid, tenant_name) ON DELETE CASCADE,
-    FOREIGN KEY (fabric_uuid, tenant_name, vrf_name)
-        REFERENCES aci_vrf(fabric_uuid, tenant_name, vrf_name) ON DELETE RESTRICT,
+    PRIMARY KEY (fabric_uuid, tenant_id, bd_id),
+    FOREIGN KEY (fabric_uuid, tenant_id) REFERENCES aci_tenant(fabric_uuid, tenant_id) ON DELETE CASCADE,
+    FOREIGN KEY (fabric_uuid, tenant_id, vrf_id)
+        REFERENCES aci_vrf(fabric_uuid, tenant_id, vrf_id) ON DELETE RESTRICT,
     INDEX (bd_name),
     INDEX (subnet)
 );
@@ -94,12 +93,13 @@ CREATE TABLE IF NOT EXISTS aci_bd (
 """
 CREATE TABLE IF NOT EXISTS aci_ap (
     fabric_uuid CHAR(36) NOT NULL,
-    tenant_name VARCHAR(100) NOT NULL,
+    tenant_id VARCHAR(100) NOT NULL,
+    ap_id VARCHAR(100) NOT NULL,
     ap_name VARCHAR(100) NOT NULL,
     description VARCHAR(255),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (fabric_uuid, tenant_name, ap_name),
-    FOREIGN KEY (fabric_uuid, tenant_name) REFERENCES aci_tenant(fabric_uuid, tenant_name) ON DELETE CASCADE,
+    PRIMARY KEY (fabric_uuid, tenant_id, ap_id),
+    FOREIGN KEY (fabric_uuid, tenant_id) REFERENCES aci_tenant(fabric_uuid, tenant_id) ON DELETE CASCADE,
     INDEX (ap_name)
 );
 """,
@@ -107,17 +107,15 @@ CREATE TABLE IF NOT EXISTS aci_ap (
 """
 CREATE TABLE IF NOT EXISTS aci_epg (
     fabric_uuid CHAR(36) NOT NULL,
-    tenant_name VARCHAR(100) NOT NULL,
-    ap_name VARCHAR(100) NOT NULL,
+    tenant_id VARCHAR(100) NOT NULL,
+    ap_id VARCHAR(100) NOT NULL,
+    epg_id VARCHAR(100) NOT NULL,
     epg_name VARCHAR(100) NOT NULL,
-    bd_name VARCHAR(100),
     description VARCHAR(255),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (fabric_uuid, tenant_name, ap_name, epg_name),
-    FOREIGN KEY (fabric_uuid, tenant_name, ap_name)
-        REFERENCES aci_ap(fabric_uuid, tenant_name, ap_name) ON DELETE CASCADE,
-    FOREIGN KEY (fabric_uuid, tenant_name, bd_name)
-        REFERENCES aci_bd(fabric_uuid, tenant_name, bd_name) ON DELETE RESTRICT,
+    PRIMARY KEY (fabric_uuid, tenant_id, ap_id, epg_id),
+    FOREIGN KEY (fabric_uuid, tenant_id, ap_id)
+        REFERENCES aci_ap(fabric_uuid, tenant_id, ap_id) ON DELETE CASCADE,
     INDEX (epg_name)
 );
 """,
