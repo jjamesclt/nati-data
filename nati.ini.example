@@ -1,10 +1,10 @@
 [database]
-# Two simple items for SQLLite Configuration
+# Two simple items for SQLite Configuration
 type = sqlite
 filename = nati.db
 
 # The following are for using a MariaDB/MySQL server
-# engine = mariadb
+# type = mariadb
 host = localhost
 port = 3306
 database = nati
