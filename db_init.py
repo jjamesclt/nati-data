@@ -35,14 +35,35 @@ else:
 # SQL table creation commands - core NATI module
 nati_tables = [
 """
+CREATE TABLE IF NOT EXISTS nati_region (
+    region_uuid CHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    country_code CHAR(2) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
 CREATE TABLE IF NOT EXISTS nati_site (
     site_uuid CHAR(36) PRIMARY KEY,
-    site_id VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
-    country VARCHAR(2) NOT NULL,
-    region VARCHAR(100),
+    region_uuid CHAR(36) NOT NULL,
+    address TEXT,
+    site_type VARCHAR(50),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX (name)
+    FOREIGN KEY (region_uuid) REFERENCES nati_region(region_uuid)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_location (
+    location_uuid CHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    region_uuid CHAR(36) NOT NULL,
+    site_uuid CHAR(36),
+    country_code CHAR(2),
+    address TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (region_uuid) REFERENCES nati_region(region_uuid),
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid)
 );
 """,
 """
@@ -86,6 +107,15 @@ CREATE TABLE IF NOT EXISTS nati_user_role (
     FOREIGN KEY (user_uuid) REFERENCES nati_user(user_uuid) ON DELETE CASCADE,
     FOREIGN KEY (role_uuid) REFERENCES nati_role(role_uuid) ON DELETE CASCADE
 );
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_credential (
+    cred_uuid CHAR(36) PRIMARY KEY,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 ]
 
@@ -94,12 +124,15 @@ network_tables = [
 """
 CREATE TABLE IF NOT EXISTS network_device (
     device_uuid CHAR(36) PRIMARY KEY,
-    device_id VARCHAR(100) NOT NULL UNIQUE,
     hostname VARCHAR(100) NOT NULL,
+    fqdn VARCHAR(255),
+    ip_address VARCHAR(45),
     location VARCHAR(100),
     device_type VARCHAR(50),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX (hostname)
+    INDEX (hostname),
+    INDEX (fqdn),
+    INDEX (ip_address)
 );
 """,
 """
@@ -141,7 +174,7 @@ CREATE TABLE IF NOT EXISTS aci_fabric (
     username VARCHAR(100) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE (site_uuid, fabric_name),
-    FOREIGN KEY (site_uuid) REFERENCES site(site_uuid) ON DELETE CASCADE
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE
 );
 """,
 """
