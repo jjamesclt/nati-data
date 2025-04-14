@@ -9,18 +9,10 @@ Documentation:
 """
 
 import requests
-import configparser
 import urllib3
 
 # Disable "InsecureRequestWarning" when skipping TLS verification
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-config = configparser.ConfigParser()
-config.read('nati.ini')
-
-username = config.get('opengear', 'og_uid')
-password = config.get('opengear', 'og_pwd')
-
 
 class Lighthouse:
     def __init__(self, base_url, username, password):
