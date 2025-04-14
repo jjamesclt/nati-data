@@ -21,3 +21,7 @@ password = password
 host = sbx-nxos-mgmt.cisco.com
 username = admin
 password = password
+
+[opengear]
+og_uid = lh_account
+og_pwd = lh_password

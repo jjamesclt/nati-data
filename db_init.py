@@ -32,22 +32,137 @@ if custom_user:
 else:
     db_config = default_config
 
-# SQL table creation commands
-db_tables = [
+# SQL table creation commands - core NATI module
+nati_tables = [
 """
-CREATE TABLE IF NOT EXISTS site (
-    site_uuid CHAR(36) PRIMARY KEY,
-    site_id VARCHAR(50) NOT NULL UNIQUE,
+CREATE TABLE IF NOT EXISTS nati_region (
+    region_uuid CHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    country VARCHAR(2) NOT NULL,
-    region VARCHAR(100),
+    country_code CHAR(2) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_site (
+    site_uuid CHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    region_uuid CHAR(36) NOT NULL,
+    address TEXT,
+    site_type VARCHAR(50),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX (name)
+    FOREIGN KEY (region_uuid) REFERENCES nati_region(region_uuid)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_location (
+    location_uuid CHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    region_uuid CHAR(36) NOT NULL,
+    site_uuid CHAR(36),
+    country_code CHAR(2),
+    address TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (region_uuid) REFERENCES nati_region(region_uuid),
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_config (
+    config_uuid CHAR(36) PRIMARY KEY,
+    key_name VARCHAR(100) NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_user (
+    user_uuid CHAR(36) PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    full_name VARCHAR(150),
+    email VARCHAR(150),
+    active BOOLEAN DEFAULT TRUE,
+    source VARCHAR(50) DEFAULT 'local',
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX (username),
+    INDEX (email)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_role (
+    role_uuid CHAR(36) PRIMARY KEY,
+    role_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX (role_name)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_user_role (
+    user_uuid CHAR(36) NOT NULL,
+    role_uuid CHAR(36) NOT NULL,
+    assigned_by VARCHAR(100),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_uuid, role_uuid),
+    FOREIGN KEY (user_uuid) REFERENCES nati_user(user_uuid) ON DELETE CASCADE,
+    FOREIGN KEY (role_uuid) REFERENCES nati_role(role_uuid) ON DELETE CASCADE
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_credential (
+    cred_uuid CHAR(36) PRIMARY KEY,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
 ]
 
-# SQL table creation commands
+# SQL table creation commands - network module
+network_tables = [
+"""
+CREATE TABLE IF NOT EXISTS network_device (
+    device_uuid CHAR(36) PRIMARY KEY,
+    hostname VARCHAR(100) NOT NULL,
+    fqdn VARCHAR(255),
+    ip_address VARCHAR(45),
+    location VARCHAR(100),
+    device_type VARCHAR(50),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX (hostname),
+    INDEX (fqdn),
+    INDEX (ip_address)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS network_interface (
+    interface_uuid CHAR(36) PRIMARY KEY,
+    device_uuid CHAR(36) NOT NULL,
+    interface_id VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_uuid) REFERENCES network_device(device_uuid) ON DELETE CASCADE,
+    UNIQUE (device_uuid, interface_id),
+    INDEX (name)
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS network_circuit (
+    circuit_uuid CHAR(36) PRIMARY KEY,
+    interface_uuid CHAR(36) NOT NULL,
+    circuit_id VARCHAR(100) NOT NULL UNIQUE,
+    provider VARCHAR(100),
+    bandwidth VARCHAR(50),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (interface_uuid) REFERENCES network_interface(interface_uuid) ON DELETE CASCADE,
+    INDEX (provider)
+);
+"""
+]
+
+# SQL table creation commands - Cisco ACI module
 aci_tables = [
 """
 CREATE TABLE IF NOT EXISTS aci_fabric (
@@ -59,10 +174,9 @@ CREATE TABLE IF NOT EXISTS aci_fabric (
     username VARCHAR(100) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE (site_uuid, fabric_name),
-    FOREIGN KEY (site_uuid) REFERENCES site(site_uuid) ON DELETE CASCADE
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE
 );
 """,
-
 """
 CREATE TABLE IF NOT EXISTS aci_tenant (
     fabric_uuid CHAR(36) NOT NULL,
@@ -75,7 +189,6 @@ CREATE TABLE IF NOT EXISTS aci_tenant (
     FOREIGN KEY (fabric_uuid) REFERENCES aci_fabric(fabric_uuid) ON DELETE CASCADE
 );
 """,
-
 """
 CREATE TABLE IF NOT EXISTS aci_vrf (
     fabric_uuid CHAR(36) NOT NULL,
@@ -89,7 +202,6 @@ CREATE TABLE IF NOT EXISTS aci_vrf (
     INDEX (vrf_name)
 );
 """,
-
 """
 CREATE TABLE IF NOT EXISTS aci_bd (
     fabric_uuid CHAR(36) NOT NULL,
@@ -108,7 +220,6 @@ CREATE TABLE IF NOT EXISTS aci_bd (
     INDEX (subnet)
 );
 """,
-
 """
 CREATE TABLE IF NOT EXISTS aci_ap (
     fabric_uuid CHAR(36) NOT NULL,
@@ -122,7 +233,6 @@ CREATE TABLE IF NOT EXISTS aci_ap (
     INDEX (ap_name)
 );
 """,
-
 """
 CREATE TABLE IF NOT EXISTS aci_epg (
     fabric_uuid CHAR(36) NOT NULL,
@@ -138,7 +248,6 @@ CREATE TABLE IF NOT EXISTS aci_epg (
     INDEX (epg_name)
 );
 """,
-
 """
 CREATE TABLE IF NOT EXISTS aci_node (
     fabric_uuid CHAR(36) NOT NULL,
@@ -159,7 +268,9 @@ CREATE TABLE IF NOT EXISTS aci_node (
 try:
     conn = pymysql.connect(**db_config)
     cursor = conn.cursor()
-    for table in db_tables:
+    for table in nati_tables:
+        cursor.execute(table)
+    for table in network_tables:
         cursor.execute(table)
     for table in aci_tables:
         cursor.execute(table)
