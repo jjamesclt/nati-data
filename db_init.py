@@ -1,6 +1,6 @@
 import pymysql
 import getpass
-from nati_data.config_manager import ConfigManager
+from nati.config_manager import ConfigManager
 
 # Database credentials
 config = ConfigManager()
