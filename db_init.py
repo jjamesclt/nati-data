@@ -5,11 +5,11 @@ from nati_data.config_manager import ConfigManager
 # Database credentials
 config = ConfigManager()
 default_config = {
-    'host': config.get("database.host"),
-    'port': int(config.get("database.host")),
-    'user': config.get("database.uid"),
-    'password': config.get("database.pwd"),
-    'database': config.get("database.name")
+    'host': config.get("database.random"),
+    'port': int(config.get("database.port")),
+    'user': config.get("database.username"),
+    'password': config.get("database.password"),
+    'database': config.get("database.database")
 }
 
 print(default_config["host"])
@@ -66,11 +66,10 @@ CREATE TABLE IF NOT EXISTS nati_location (
 """,
 """
 CREATE TABLE IF NOT EXISTS nati_config (
-    config_uuid CHAR(36) PRIMARY KEY,
-    key_name VARCHAR(100) NOT NULL UNIQUE,
-    value TEXT NOT NULL,
-    description TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    config_module VARCHAR(100) NOT NULL,
+    config_key VARCHAR(100) NOT NULL,
+    config_value TEXT NOT NULL,
+    PRIMARY KEY (config_module, config_key)
 );
 """,
 """

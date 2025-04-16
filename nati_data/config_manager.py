@@ -32,13 +32,13 @@ def get_random_working_db_host(hosts_csv: str, fallback_host: str, port: int, us
 
     raise ConnectionError(f"None of the database hosts are reachable: {hosts}")
 
-
 class ConfigManager:
-    def __init__(self, ini_filename='nati.ini'):
+    def __init__(self, ini_filename='nati.ini', config_table='nati_config'):
         self.ini_file = os.path.join(os.getcwd(), ini_filename)
         self.parser = configparser.ConfigParser()
         self.parser.read(self.ini_file)
 
+        self.config_table = config_table
         self.db_conn = None
         self.db_data = {}
 
@@ -62,9 +62,9 @@ class ConfigManager:
             hosts_csv=db_cfg.get('hosts', ''),
             fallback_host=db_cfg.get('host', None),
             port=int(db_cfg.get('port', 3306)),
-            user=db_cfg['uid'],
-            password=db_cfg['pwd'],
-            database=db_cfg['name']
+            user=db_cfg['username'],
+            password=db_cfg['password'],
+            database=db_cfg['database']
         )
 
     def get_from_db(self, module: str, key: str):
@@ -79,9 +79,9 @@ class ConfigManager:
     def _init_db_conn(self):
         db_cfg = self.parser['database']
         port = int(db_cfg.get('port', 3306))
-        user = db_cfg['uid']
-        password = db_cfg['pwd']
-        database = db_cfg['name']
+        user = db_cfg['username']
+        password = db_cfg['password']
+        database = db_cfg['database']
 
         working_host = get_random_working_db_host(
             hosts_csv=db_cfg.get('hosts', ''),
@@ -103,7 +103,7 @@ class ConfigManager:
     def _load_db_data(self):
         try:
             with self.db_conn.cursor() as cursor:
-                cursor.execute("SELECT config_module, config_key, config_value FROM nati_config")
+                cursor.execute(f"SELECT config_module, config_key, config_value FROM {{self.config_table}}")
                 for module, key, value in cursor.fetchall():
                     self.db_data[(module, key)] = value
         except Exception as e:
