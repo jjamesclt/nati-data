@@ -1,20 +1,18 @@
 import pymysql
-import configparser
 import getpass
-
-# Load configuration
-config = configparser.ConfigParser()
-config.read('nati.ini')
+from nati_data.config_manager import ConfigManager
 
 # Database credentials
+config = ConfigManager()
 default_config = {
-    'host': config['database']['host'],
-    'port': int(config['database']['port']),
-    'user': config['database']['username'],
-    'password': config['database']['password'],
-    'database': config['database']['database']
+    'host': config.get("database.host"),
+    'port': int(config.get("database.host")),
+    'user': config.get("database.uid"),
+    'password': config.get("database.pwd"),
+    'database': config.get("database.name")
 }
 
+print(default_config["host"])
 
 # Prompt user for elevated credentials
 print("Press Enter to use default credentials from nati.ini.")
