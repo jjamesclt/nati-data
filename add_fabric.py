@@ -1,22 +1,17 @@
 import uuid
 import pymysql
-import configparser
+from nati.config_manager import ConfigManager
 
-# Read database configuration from nati.ini
-config = configparser.ConfigParser()
-config.read('nati.ini')
-
-# Database connection settings
-db_settings = config['database']
-
+# Implement configuration management
+config = ConfigManager()
 
 def add_fabric():
     conn = pymysql.connect(
-        host=db_settings['host'],
-        port=int(db_settings['port']),
-        user=db_settings['username'],
-        password=db_settings['password'],
-        database=db_settings['database']
+        host=config.get('database.random'),
+        port=int(config.get('database.port')),
+        user=config.get('database.username'),
+        password=config.get('database.password'),
+        database=config.get('database.database'),
     )
 
     try:

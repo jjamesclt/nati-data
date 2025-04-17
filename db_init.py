@@ -35,18 +35,29 @@ nati_tables = [
 """
 CREATE TABLE IF NOT EXISTS nati_region (
     region_uuid CHAR(36) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    country_code CHAR(2) NOT NULL,
+    region_id VARCHAR(20) UNIQUE,
+    region_name VARCHAR(100) NOT NULL UNIQUE,
+    region_type ENUM('physical', 'cloud', 'logical') DEFAULT 'physical',
+    country_code CHAR(2),
+    description TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """,
 """
 CREATE TABLE IF NOT EXISTS nati_site (
     site_uuid CHAR(36) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
     region_uuid CHAR(36) NOT NULL,
-    address TEXT,
-    site_type VARCHAR(50),
+    site_id VARCHAR(20) UNIQUE,
+    site_name VARCHAR(150) NOT NULL,
+    site_type ENUM('data_center', 'branch', 'lab', 'cloud', 'colo', 'virtual') DEFAULT 'data_center',
+    address VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    postal_code VARCHAR(20),
+    country VARCHAR(100),
+    latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
+    description TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (region_uuid) REFERENCES nati_region(region_uuid)
 );
@@ -54,14 +65,25 @@ CREATE TABLE IF NOT EXISTS nati_site (
 """
 CREATE TABLE IF NOT EXISTS nati_location (
     location_uuid CHAR(36) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    region_uuid CHAR(36) NOT NULL,
+    location_id VARCHAR(20) UNIQUE,
+    location_name VARCHAR(150) NOT NULL,
+    location_type ENUM(
+        'rack', 'room', 'floor', 'vpc', 'az',
+        'namespace', 'k8s_cluster', 'segment',
+        'logical', 'other'
+    ) DEFAULT 'rack',
+    description TEXT,
+    virtual BOOLEAN DEFAULT FALSE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_location_site_map (
+    location_uuid CHAR(36),
     site_uuid CHAR(36),
-    country_code CHAR(2),
-    address TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (region_uuid) REFERENCES nati_region(region_uuid),
-    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid)
+    PRIMARY KEY (location_uuid, site_uuid),
+    FOREIGN KEY (location_uuid) REFERENCES nati_location(location_uuid) ON DELETE CASCADE,
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE
 );
 """,
 """

@@ -1,31 +1,29 @@
 import requests
 import pymysql
 import configparser
-import uuid
+from nati.config_manager import ConfigManager
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Load configuration
-config = configparser.ConfigParser()
-config.read('nati.ini')
+config = ConfigManager()
 
 # Database Credentials
 aci_config = {
-    'host': config['ciscoaci']['host'],
-    'user': config['ciscoaci']['username'],
-    'password': config['ciscoaci']['password'],
+    'host': config.get('ciscoaci.host'),
+    'user': config.get('ciscoaci.username'),
+    'password': config.get('ciscoaci.password'),
 }
 
 # Database Credentials
 db_config = {
-    'host': config['database']['host'],
-    'port': int(config['database']['port']),
-    'user': config['database']['username'],
-    'password': config['database']['password'],
-    'database': config['database']['database'],
+    'host': config.get('database.random'),
+    'port': int(config.get('database.port')),
+    'user': config.get('database.username'),
+    'password': config.get('database.password'),
+    'database': config.get('database.database'),
     'cursorclass': pymysql.cursors.DictCursor
 }
-
 
 def get_aci_token():
     aci_host = aci_config['host']
