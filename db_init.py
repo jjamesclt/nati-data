@@ -83,7 +83,8 @@ CREATE TABLE IF NOT EXISTS nati_location_site_map (
     site_uuid CHAR(36),
     PRIMARY KEY (location_uuid, site_uuid),
     FOREIGN KEY (location_uuid) REFERENCES nati_location(location_uuid) ON DELETE CASCADE,
-    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """,
 """
@@ -91,7 +92,8 @@ CREATE TABLE IF NOT EXISTS nati_config (
     config_module VARCHAR(100) NOT NULL,
     config_key VARCHAR(100) NOT NULL,
     config_value TEXT NOT NULL,
-    PRIMARY KEY (config_module, config_key)
+    PRIMARY KEY (config_module, config_key),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """,
 """
@@ -129,12 +131,21 @@ CREATE TABLE IF NOT EXISTS nati_user_role (
 );
 """,
 """
+CREATE TABLE IF NOT EXISTS nati_api_key (
+    key_id CHAR(36) PRIMARY KEY,
+    label VARCHAR(100),
+    api_key_hash CHAR(64),
+    active BOOLEAN DEFAULT TRUE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
 CREATE TABLE IF NOT EXISTS nati_credential (
     cred_uuid CHAR(36) PRIMARY KEY,
     username TEXT NOT NULL,
     password TEXT NOT NULL,
     description TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """
 ]
