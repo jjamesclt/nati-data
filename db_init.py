@@ -33,11 +33,38 @@ else:
 # SQL table creation commands - core NATI module
 nati_tables = [
 """
+CREATE TABLE IF NOT EXISTS nati_org (
+    org_uuid CHAR(36) PRIMARY KEY,
+    org_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_bu (
+    bu_uuid CHAR(36) PRIMARY KEY,
+    org_uuid CHAR(36) NOT NULL,
+    bu_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    UNIQUE (org_uuid, bu_name),
+    FOREIGN KEY (org_uuid) REFERENCES nati_org(org_uuid) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
+CREATE TABLE IF NOT EXISTS nati_env (
+    env_uuid CHAR(36) PRIMARY KEY,
+    env_name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
 CREATE TABLE IF NOT EXISTS nati_region (
     region_uuid CHAR(36) PRIMARY KEY,
     region_id VARCHAR(20) UNIQUE,
     region_name VARCHAR(100) NOT NULL UNIQUE,
-    region_type ENUM('physical', 'cloud', 'logical') DEFAULT 'physical',
+    type ENUM('physical', 'cloud', 'logical') DEFAULT 'physical',
     country_code CHAR(2),
     description TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -47,9 +74,11 @@ CREATE TABLE IF NOT EXISTS nati_region (
 CREATE TABLE IF NOT EXISTS nati_site (
     site_uuid CHAR(36) PRIMARY KEY,
     region_uuid CHAR(36) NOT NULL,
+    bu_uuid CHAR(36),
+    env_uuid CHAR(36),
     site_id VARCHAR(20) UNIQUE,
     site_name VARCHAR(150) NOT NULL,
-    site_type ENUM('data_center', 'branch', 'lab', 'cloud', 'colo', 'virtual') DEFAULT 'data_center',
+    site_type ENUM('datacenter', 'branch', 'lab', 'cloud', 'cnf', 'office', 'colo', 'virtual') DEFAULT 'datacenter',
     address VARCHAR(255),
     city VARCHAR(100),
     state VARCHAR(50),
@@ -70,8 +99,8 @@ CREATE TABLE IF NOT EXISTS nati_location (
     location_type ENUM(
         'rack', 'room', 'floor', 'vpc', 'az',
         'namespace', 'k8s_cluster', 'segment',
-        'logical', 'other'
-    ) DEFAULT 'rack',
+        'logical', 'other', 'site', 'office'
+    ) DEFAULT 'site',
     description TEXT,
     virtual BOOLEAN DEFAULT FALSE,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -83,7 +112,8 @@ CREATE TABLE IF NOT EXISTS nati_location_site_map (
     site_uuid CHAR(36),
     PRIMARY KEY (location_uuid, site_uuid),
     FOREIGN KEY (location_uuid) REFERENCES nati_location(location_uuid) ON DELETE CASCADE,
-    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE
+    FOREIGN KEY (site_uuid) REFERENCES nati_site(site_uuid) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """,
 """
@@ -91,7 +121,8 @@ CREATE TABLE IF NOT EXISTS nati_config (
     config_module VARCHAR(100) NOT NULL,
     config_key VARCHAR(100) NOT NULL,
     config_value TEXT NOT NULL,
-    PRIMARY KEY (config_module, config_key)
+    PRIMARY KEY (config_module, config_key),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """,
 """
@@ -99,7 +130,8 @@ CREATE TABLE IF NOT EXISTS nati_user (
     user_uuid CHAR(36) PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     full_name VARCHAR(150),
-    email VARCHAR(150),
+    email VARCHAR(150) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     source VARCHAR(50) DEFAULT 'local',
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -128,12 +160,21 @@ CREATE TABLE IF NOT EXISTS nati_user_role (
 );
 """,
 """
+CREATE TABLE IF NOT EXISTS nati_api_key (
+    key_id CHAR(36) PRIMARY KEY,
+    label VARCHAR(100),
+    api_key_hash CHAR(64),
+    active BOOLEAN DEFAULT TRUE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+""",
+"""
 CREATE TABLE IF NOT EXISTS nati_credential (
     cred_uuid CHAR(36) PRIMARY KEY,
     username TEXT NOT NULL,
     password TEXT NOT NULL,
     description TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 """
 ]
