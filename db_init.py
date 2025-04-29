@@ -219,6 +219,15 @@ CREATE TABLE IF NOT EXISTS network_circuit (
     FOREIGN KEY (interface_uuid) REFERENCES network_interface(interface_uuid) ON DELETE CASCADE,
     INDEX (provider)
 );
+""",
+"""
+CREATE TABLE IF NOT EXISTS network_ouidb (
+    oui CHAR(8) PRIMARY KEY,
+    company_name VARCHAR(255),
+    company_address TEXT,
+    country VARCHAR(50),
+    updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 """
 ]
 
