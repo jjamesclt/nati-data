@@ -222,12 +222,12 @@ CREATE TABLE IF NOT EXISTS network_circuit (
 """,
 """
 CREATE TABLE IF NOT EXISTS network_ouidb (
-    oui CHAR(8) PRIMARY KEY,
-    company_name VARCHAR(255),
-    company_address TEXT,
-    country VARCHAR(50),
-    updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+    mac_prefix CHAR(9) PRIMARY KEY,
+    vendor_name VARCHAR(255),
+    timestamp TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 """
 ]
 
